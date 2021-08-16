@@ -16,26 +16,30 @@
  *
  */
 
-module axi_sspi_wrap 
-	qspis_pkg::*;
-(
+module axi_sspi_wrap #(
+	parameter AXI_ADDR_WIDTH = 32,
+	parameter AXI_DATA_WIDTH = 64,
+	parameter AXI_USER_WIDTH = 1,
+	parameter AXI_ID_WIDTH = 3,
+	parameter DUMMY_CYCLES = 1
+)(
 	input logic clk_i,
 	input logic rstn_i,
 	input logic test_mode_i,
 
 	AXI_BUS.Master axi_spis_bus,
 
-	output qspis_to_pad_t qspis_to_pad_o,
-	input pad_to_qspis_t pad_to_qspis_i
+	output qspis_pkg::qspis_to_pad_t qspis_to_pad_o,
+	input qspis_pkg::pad_to_qspis_t pad_to_qspis_i
 	
 );
 
 axi_spi_slave #(
-	.AXI_ADDR_WIDTH(32),
-	.AXI_DATA_WIDTH(64),
-	.AXI_USER_WIDTH(6),
-	.AXI_ID_WIDTH  (3),
-	.DUMMY_CYCLES  (32)
+	.AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
+	.AXI_DATA_WIDTH(AXI_DATA_WIDTH),
+	.AXI_USER_WIDTH(AXI_USER_WIDTH),
+	.AXI_ID_WIDTH  (AXI_ID_WIDTH),
+	.DUMMY_CYCLES  (DUMMY_CYCLES)
 ) i_axi_spi_slave (
 	.test_mode           (test_mode_i           ),
 
