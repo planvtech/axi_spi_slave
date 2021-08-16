@@ -4,7 +4,7 @@ package:
 dependencies:
    axi: { git: "https://github.com/pulp-platform/axi.git", version: 0.29.1 }
 
-source :
+sources:
   -
     files:
     - qspis_pkg.sv
