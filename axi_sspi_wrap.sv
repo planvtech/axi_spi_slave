@@ -44,7 +44,7 @@ axi_spi_slave #(
 	.test_mode           (test_mode_i           ),
 
 	.spi_sclk            (pad_to_qspis_i.sck_i  ),
-	.spi_cs              (pad_to_qspis_i.csn0_i ),
+	.spi_cs              (pad_to_qspis_i.csn_i ),
 
 	.spi_oen0_o          (qspis_to_pad_o.sd0_oe ),
 	.spi_oen1_o          (qspis_to_pad_o.sd1_oe ),

@@ -15,10 +15,7 @@ package qspis_pkg;
 		logic sd1_i;
 		logic sd2_i;
 		logic sd3_i;
-		logic csn0_i;
-		logic csn1_i;
-		logic csn2_i;
-		logic csn3_i;
+		logic csn_i;
 		logic sck_i;
 	} pad_to_qspis_t;
 endpackage
