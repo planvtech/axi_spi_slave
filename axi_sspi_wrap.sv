@@ -34,6 +34,14 @@ module axi_sspi_wrap #(
 	
 );
 
+  logic [3:0] spi_oen;
+
+  assign qspis_to_pad_o.sd0_oe = ~spi_oen[0];
+  assign qspis_to_pad_o.sd1_oe = ~spi_oen[1];
+  assign qspis_to_pad_o.sd2_oe = ~spi_oen[2];
+  assign qspis_to_pad_o.sd3_oe = ~spi_oen[3];
+
+
 axi_spi_slave #(
 	.AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
 	.AXI_DATA_WIDTH(AXI_DATA_WIDTH),
@@ -46,10 +54,10 @@ axi_spi_slave #(
 	.spi_sclk            (pad_to_qspis_i.sck_i  ),
 	.spi_cs              (pad_to_qspis_i.csn_i ),
 
-	.spi_oen0_o          (qspis_to_pad_o.sd0_oe ),
-	.spi_oen1_o          (qspis_to_pad_o.sd1_oe ),
-	.spi_oen2_o          (qspis_to_pad_o.sd2_oe ),
-	.spi_oen3_o          (qspis_to_pad_o.sd3_oe ),
+	.spi_oen0_o          (spi_oen[0] ),
+	.spi_oen1_o          (spi_oen[1] ),
+	.spi_oen2_o          (spi_oen[2] ),
+	.spi_oen3_o          (spi_oen[3] ),
 
 
 	.spi_sdi0            (pad_to_qspis_i.sd0_i  ),
