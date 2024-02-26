@@ -95,30 +95,30 @@ module axi_spi_slave
     logic        en_quad;
     logic  [7:0] rx_counter;
     logic        rx_counter_upd;
-    logic [31:0] rx_data;
+    logic [AXI_DATA_WIDTH-1:0] rx_data;
     logic        rx_data_valid;
 
     logic  [7:0] tx_counter;
     logic        tx_counter_upd;
-    logic [31:0] tx_data;
+    logic [AXI_DATA_WIDTH-1:0] tx_data;
     logic        tx_data_valid;
 
     logic        ctrl_rd_wr;
 
-    logic [31:0] ctrl_addr;
+    logic [AXI_DATA_WIDTH-1:0] ctrl_addr;
     logic        ctrl_addr_valid;
 
-    logic [31:0] ctrl_data_rx;
+    logic [AXI_DATA_WIDTH-1:0] ctrl_data_rx;
     logic        ctrl_data_rx_valid;
     logic        ctrl_data_rx_ready;
-    logic [31:0] ctrl_data_tx;
+    logic [AXI_DATA_WIDTH-1:0] ctrl_data_tx;
     logic        ctrl_data_tx_valid;
     logic        ctrl_data_tx_ready;
 
-    logic [31:0] fifo_data_rx;
+    logic [AXI_DATA_WIDTH-1:0] fifo_data_rx;
     logic        fifo_data_rx_valid;
     logic        fifo_data_rx_ready;
-    logic [31:0] fifo_data_tx;
+    logic [AXI_DATA_WIDTH-1:0] fifo_data_tx;
     logic        fifo_data_tx_valid;
     logic        fifo_data_tx_ready;
 

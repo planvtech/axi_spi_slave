@@ -13,8 +13,9 @@
 `define SPI_QUAD_TX 2'b10
 `define SPI_QUAD_RX 2'b11
 
-module spi_slave_tx
-(
+module spi_slave_tx#(
+    parameter DATA_WIDTH = 32
+)(
     input  logic        test_mode,
     input  logic        sclk,
     input  logic        cs,
@@ -30,13 +31,13 @@ module spi_slave_tx
     input  logic        en_quad_in,
     input  logic  [7:0] counter_in,
     input  logic        counter_in_upd,
-    input  logic [31:0] data,
+    input  logic [DATA_WIDTH-1:0] data,
     input  logic        data_valid,
     output logic        done
 );
 
-    reg [31:0] data_int;
-    reg [31:0] data_int_next;
+    reg [DATA_WIDTH-1:0] data_int;
+    reg [DATA_WIDTH-1:0] data_int_next;
     reg  [7:0] counter;
     reg  [7:0] counter_trgt;
     reg  [7:0] counter_next;
@@ -48,10 +49,10 @@ module spi_slave_tx
     logic sclk_inv;
     logic sclk_test;
 
-    assign sdo0 = (en_quad_in) ? data_int[28] : 1'b0;
-    assign sdo1 = (en_quad_in) ? data_int[29] : data_int[31];
-    assign sdo2 = (en_quad_in) ? data_int[30] : 1'b0;
-    assign sdo3 = (en_quad_in) ? data_int[31] : 1'b0;
+    assign sdo0 = (en_quad_in) ? data_int[DATA_WIDTH-4] : 1'b0;
+    assign sdo1 = (en_quad_in) ? data_int[DATA_WIDTH-3] : data_int[DATA_WIDTH-1];
+    assign sdo2 = (en_quad_in) ? data_int[DATA_WIDTH-2] : 1'b0;
+    assign sdo3 = (en_quad_in) ? data_int[DATA_WIDTH-1] : 1'b0;
 
     always_comb
     begin
@@ -83,9 +84,9 @@ module spi_slave_tx
                 else
                 begin
                         if (en_quad_in)
-                                data_int_next = {data_int[27:0],4'b0000};
+                                data_int_next = {data_int[DATA_WIDTH-5:0],4'b0000};
                         else
-                                data_int_next = {data_int[30:0],1'b0};
+                                data_int_next = {data_int[DATA_WIDTH-2:0],1'b0};
                 end
         end
         else

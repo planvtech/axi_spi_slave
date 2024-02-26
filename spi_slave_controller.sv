@@ -15,7 +15,9 @@
 
 module spi_slave_controller
     #(
-    parameter DUMMY_CYCLES = 32
+    parameter DUMMY_CYCLES = 32,
+    parameter ADDR_WIDTH = 32,
+    parameter DATA_WIDTH = 32
     )
     (input logic        sclk,
     input  logic        sys_rstn,
@@ -24,20 +26,20 @@ module spi_slave_controller
     output logic  [1:0] pad_mode,
     output logic  [7:0] rx_counter,
     output logic        rx_counter_upd,
-    input  logic [31:0] rx_data,
+    input  logic [DATA_WIDTH-1:0] rx_data,
     input  logic        rx_data_valid,
     output logic  [7:0] tx_counter,
     output logic        tx_counter_upd,
-    output logic [31:0] tx_data,
+    output logic [DATA_WIDTH-1:0] tx_data,
     output logic        tx_data_valid,
     input  logic        tx_done,
     output logic        ctrl_rd_wr,
-    output logic [31:0] ctrl_addr,
+    output logic [ADDR_WIDTH-1:0] ctrl_addr,
     output logic        ctrl_addr_valid,
-    output logic [31:0] ctrl_data_rx,
+    output logic [DATA_WIDTH-1:0] ctrl_data_rx,
     output logic        ctrl_data_rx_valid,
     input  logic        ctrl_data_rx_ready,
-    input  logic [31:0] ctrl_data_tx,
+    input  logic [DATA_WIDTH-1:0] ctrl_data_tx,
     input  logic        ctrl_data_tx_valid,
     output logic        ctrl_data_tx_ready,
     output logic [15:0] wrap_length
@@ -52,10 +54,10 @@ module spi_slave_controller
 
   logic        decode_cmd_comb;
 
-  logic [31:0] addr_reg;
+  logic [ADDR_WIDTH-1:0] addr_reg;
   logic  [7:0] cmd_reg;
   logic  [7:0] mode_reg;
-  logic [31:0] data_reg;
+  logic [DATA_WIDTH-1:0] data_reg;
 
   logic        sample_ADDR;
   logic        sample_MODE;

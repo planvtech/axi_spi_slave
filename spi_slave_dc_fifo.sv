@@ -26,7 +26,7 @@ module spi_slave_dc_fifo #(
 
     typedef logic [DATA_WIDTH-1:0] data_t;
 
-    cdc_fifo_gray #(.WIDTH(32), .T(data_t), .LOG_DEPTH(4), .SYNC_STAGES(2)) i_cdc_fifo_gray (
+    cdc_fifo_gray #(.WIDTH(DATA_WIDTH), .T(data_t), .LOG_DEPTH(4), .SYNC_STAGES(2)) i_cdc_fifo_gray (
 
         .src_rst_ni (rstn_a ),
         .src_clk_i  (clk_a ),

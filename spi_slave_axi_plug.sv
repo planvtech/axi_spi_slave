@@ -90,7 +90,7 @@ module spi_slave_axi_plug
 
   logic [AXI_ADDR_WIDTH-1:0] curr_addr;
   logic [AXI_ADDR_WIDTH-1:0] next_addr;
-  logic [31:0]               curr_data_rx;
+  logic [AXI_DATA_WIDTH-1:0] curr_data_rx;
   logic [AXI_DATA_WIDTH-1:0] curr_data_tx;
   logic                      incr_addr_w;
   logic                      incr_addr_r;
@@ -146,13 +146,13 @@ module spi_slave_axi_plug
 
   always_comb
   begin
-    next_addr = 32'b0;
+    next_addr = AXI_ADDR_WIDTH'(0);
     if(rxtx_addr_valid)
       next_addr = rxtx_addr;
     else if(tx_counter == wrap_length-1)
       next_addr = rxtx_addr;
     else
-      next_addr = curr_addr + 32'h4;
+      next_addr = curr_addr + AXI_ADDR_WIDTH'(4);
   end
 
   // "stream_fork" module is used to decouple AW and W channels
@@ -283,11 +283,13 @@ module spi_slave_axi_plug
   end
 
   // for now, let us support only 32-bit reads!
-  generate if (AXI_DATA_WIDTH == 32)
-    assign tx_data = curr_data_tx[31:0];
-  else
-    assign tx_data = curr_addr[2] ? curr_data_tx[63:32] : curr_data_tx[31:0];
-  endgenerate
+  // generate if (AXI_DATA_WIDTH == 32)
+  //   assign tx_data = curr_data_tx[31:0];
+  // else
+  //   assign tx_data = curr_addr[2] ? curr_data_tx[63:32] : curr_data_tx[31:0];
+  // endgenerate
+
+  assign tx_data = curr_data_tx;
 
   assign axi_master_aw_addr   =  curr_addr;
   assign axi_master_aw_prot   =  'h0;
@@ -301,12 +303,13 @@ module spi_slave_axi_plug
   assign axi_master_aw_id     =  'h1;
   assign axi_master_aw_user   =  'h0;
 
-  assign axi_master_w_data    = {AXI_DATA_WIDTH/32{curr_data_rx}}; // replicate curr_data_rx as often as needed
-  generate if (AXI_DATA_WIDTH == 32)
-    assign axi_master_w_strb    = 4'hF;
-  else
-    assign axi_master_w_strb    = curr_addr[2] ? 8'hF0 : 8'h0F;
-  endgenerate
+  assign axi_master_w_data    = curr_data_rx; // replicate curr_data_rx as often as needed
+  // generate if (AXI_DATA_WIDTH == 32)
+  //   assign axi_master_w_strb    = 4'hF;
+  // else
+  //   assign axi_master_w_strb    = curr_addr[2] ? 8'hF0 : 8'h0F;
+  // endgenerate
+  assign axi_master_w_strb    = 4'hF;
   assign axi_master_w_user    =  'h0;
   assign axi_master_w_last    = 1'b1;
 

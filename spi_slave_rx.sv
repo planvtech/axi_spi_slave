@@ -19,12 +19,12 @@ module spi_slave_rx
     input  logic        en_quad_in,
     input  logic  [7:0] counter_in,
     input  logic        counter_in_upd,
-    output logic [31:0] data,
+    output logic [DATA_WIDTH-1:0] data,
     output logic        data_ready
 );
 
-    reg [31:0] data_int;
-    reg [31:0] data_int_next;
+    reg [DATA_WIDTH-1:0] data_int;
+    reg [DATA_WIDTH-1:0] data_int_next;
     reg  [7:0] counter;
     reg  [7:0] counter_trgt;
     reg  [7:0] counter_next;
@@ -64,9 +64,9 @@ module spi_slave_rx
                     data_ready   = 1'b0;
                 end
                 if (en_quad_in)
-                    data_int_next = {data_int[27:0],sdi3,sdi2,sdi1,sdi0};
+                    data_int_next = {data_int[DATA_WIDTH-5:0],sdi3,sdi2,sdi1,sdi0};
                 else
-                    data_int_next = {data_int[30:0],sdi0};
+                    data_int_next = {data_int[DATA_WIDTH-2:0],sdi0};
         end
         else
         begin
