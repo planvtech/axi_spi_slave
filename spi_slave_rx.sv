@@ -8,8 +8,9 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-module spi_slave_rx
-(
+module spi_slave_rx#(
+    parameter DATA_WIDTH = 32
+)(
     input  logic        sclk,
     input  logic        cs,
     input  logic        sdi0,
