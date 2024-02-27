@@ -144,7 +144,7 @@ module spi_slave_controller
           begin
             state_next     = ADDR;
             rx_counter_upd = 1;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(ADDR_WIDTH/4-1) : 8'(ADDR_WIDTH-1);
           end
           else if (get_data)
           begin
@@ -158,7 +158,7 @@ module spi_slave_controller
             state_next     = DATA_TX;
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             if (~enable_regs)
               ctrl_data_tx_ready_next = 1'b1;
           end
@@ -185,13 +185,13 @@ module spi_slave_controller
           begin
             state_next     = DATA_TX;
             tx_counter_upd_next = 1;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
           end
           else if (get_data)
           begin
             state_next     = DATA_RX;
             rx_counter_upd = 1;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
           end
         end
         else
@@ -213,13 +213,13 @@ module spi_slave_controller
           else if (get_data)
           begin
             state_next     = DATA_RX;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             rx_counter_upd = 1;
           end
           else if (send_data)
           begin
             state_next     = DATA_TX;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
             if (~enable_regs)
@@ -239,13 +239,13 @@ module spi_slave_controller
           if (get_data)
           begin
             state_next     = DATA_RX;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             rx_counter_upd = 1;
           end
           else
           begin
             state_next     = DATA_TX;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
             if (~enable_regs)
@@ -269,7 +269,7 @@ module spi_slave_controller
           if (enable_cont)
           begin
             state_next     = DATA_RX;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             rx_counter_upd = 1;
           end
           else
@@ -292,7 +292,7 @@ module spi_slave_controller
           if (enable_cont)
           begin
             state_next     = DATA_TX;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
             if (~enable_regs)
