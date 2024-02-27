@@ -132,8 +132,11 @@ module axi_spi_slave
 
     logic [15:0] wrap_length;
 
-    spi_slave_rx u_rxreg
-    (
+    spi_slave_rx #(
+
+        .DATA_WIDTH ( AXI_DATA_WIDTH )
+    )
+    u_rxreg(
         .sclk           ( spi_sclk       ),
         .cs             ( spi_cs         ),
         .sdi0           ( spi_sdi0       ),
@@ -147,8 +150,10 @@ module axi_spi_slave
         .data_ready     ( rx_data_valid  )
     );
 
-    spi_slave_tx u_txreg
-    (
+    spi_slave_tx #(
+    .DATA_WIDTH ( AXI_DATA_WIDTH )
+    )
+    u_txreg (
         .test_mode      ( test_mode      ),
         .sclk           ( spi_sclk       ),
         .cs             ( spi_cs         ),
@@ -171,7 +176,9 @@ module axi_spi_slave
 
     spi_slave_controller
     #(
-        .DUMMY_CYCLES ( DUMMY_CYCLES )
+        .DUMMY_CYCLES ( DUMMY_CYCLES ),
+        .ADDR_WIDTH ( AXI_ADDR_WIDTH ),
+        .DATA_WIDTH ( AXI_DATA_WIDTH )
     )
     u_slave_sm
     (
@@ -203,7 +210,7 @@ module axi_spi_slave
 
     spi_slave_dc_fifo
     #(
-        .DATA_WIDTH   ( 32 ),
+        .DATA_WIDTH   ( AXI_DATA_WIDTH ),
         .BUFFER_DEPTH ( 8  )
     )
     u_dcfifo_rx
@@ -222,7 +229,7 @@ module axi_spi_slave
 
     spi_slave_dc_fifo
     #(
-        .DATA_WIDTH   ( 32 ),
+        .DATA_WIDTH   ( AXI_DATA_WIDTH ),
         .BUFFER_DEPTH ( 8  )
     )
     u_dcfifo_tx
