@@ -78,10 +78,10 @@ module spi_slave_axi_plug
     input  logic                        rxtx_addr_valid,
     input  logic                        start_tx,
     input  logic                        cs,
-    output logic                 [31:0] tx_data,
+    output logic [AXI_DATA_WIDTH-1:0]   tx_data,
     output logic                        tx_valid,
     input  logic                        tx_ready,
-    input  logic                 [31:0] rx_data,
+    input  logic [AXI_DATA_WIDTH-1:0]   rx_data,
     input  logic                        rx_valid,
     output logic                        rx_ready,
 
