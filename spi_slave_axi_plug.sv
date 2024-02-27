@@ -309,7 +309,7 @@ module spi_slave_axi_plug
   // else
   //   assign axi_master_w_strb    = curr_addr[2] ? 8'hF0 : 8'h0F;
   // endgenerate
-  assign axi_master_w_strb    = 4'hF;
+  assign axi_master_w_strb    = '1;
   assign axi_master_w_user    =  'h0;
   assign axi_master_w_last    = 1'b1;
 
