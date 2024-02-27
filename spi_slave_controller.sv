@@ -117,9 +117,9 @@ module spi_slave_controller
   always_comb
   begin
     pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD_RX;
-    rx_counter     = 8'h1F;
+    rx_counter     = 8'(DATA_WIDTH-1);
     rx_counter_upd = 0;
-    tx_counter_next     = 8'h1F;
+    tx_counter_next     = 8'(DATA_WIDTH-1);
     tx_counter_upd_next = 0;
     decode_cmd_comb = 1'b0;
     sample_ADDR     = 1'b0;
