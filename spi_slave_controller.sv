@@ -1,4 +1,4 @@
-// Copyright 2015 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
 // compliance with the License.  You may obtain a copy of the License at
@@ -8,13 +8,16 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-`define SPI_STD     2'b00
-`define SPI_QUAD_TX 2'b01
-`define SPI_QUAD_RX 2'b10
+`define SPI_STD_TX  2'b00
+`define SPI_STD_RX  2'b01
+`define SPI_QUAD_TX 2'b10
+`define SPI_QUAD_RX 2'b11
 
 module spi_slave_controller
     #(
-    parameter DUMMY_CYCLES = 32
+    parameter DUMMY_CYCLES = 32,
+    parameter ADDR_WIDTH = 32,
+    parameter DATA_WIDTH = 32
     )
     (input logic        sclk,
     input  logic        sys_rstn,
@@ -23,20 +26,20 @@ module spi_slave_controller
     output logic  [1:0] pad_mode,
     output logic  [7:0] rx_counter,
     output logic        rx_counter_upd,
-    input  logic [31:0] rx_data,
+    input  logic [DATA_WIDTH-1:0] rx_data,
     input  logic        rx_data_valid,
     output logic  [7:0] tx_counter,
     output logic        tx_counter_upd,
-    output logic [31:0] tx_data,
+    output logic [DATA_WIDTH-1:0] tx_data,
     output logic        tx_data_valid,
     input  logic        tx_done,
     output logic        ctrl_rd_wr,
-    output logic [31:0] ctrl_addr,
+    output logic [ADDR_WIDTH-1:0] ctrl_addr,
     output logic        ctrl_addr_valid,
-    output logic [31:0] ctrl_data_rx,
+    output logic [DATA_WIDTH-1:0] ctrl_data_rx,
     output logic        ctrl_data_rx_valid,
     input  logic        ctrl_data_rx_ready,
-    input  logic [31:0] ctrl_data_tx,
+    input  logic [DATA_WIDTH-1:0] ctrl_data_tx,
     input  logic        ctrl_data_tx_valid,
     output logic        ctrl_data_tx_ready,
     output logic [15:0] wrap_length
@@ -51,10 +54,10 @@ module spi_slave_controller
 
   logic        decode_cmd_comb;
 
-  logic [31:0] addr_reg;
+  logic [ADDR_WIDTH-1:0] addr_reg;
   logic  [7:0] cmd_reg;
   logic  [7:0] mode_reg;
-  logic [31:0] data_reg;
+  logic [DATA_WIDTH-1:0] data_reg;
 
   logic        sample_ADDR;
   logic        sample_MODE;
@@ -78,24 +81,24 @@ module spi_slave_controller
   logic        tx_counter_upd_next;
   logic        tx_data_valid_next;
   logic        tx_done_reg;
-  logic  [1:0] pad_mode_next;
 
   logic  [7:0] s_dummy_cycles;
 
-  assign command = decode_cmd_comb ? rx_data : cmd_reg;
+  assign command = decode_cmd_comb ? rx_data[7:0] : cmd_reg;
 
-  spi_slave_cmd_parser u_cmd_parser(
-      .cmd(command),
-      .get_addr(get_addr),
-      .get_mode(get_mode),
-      .get_data(get_data),
-      .send_data(send_data),
-      .wait_dummy(wait_dummy),
-      .enable_cont(enable_cont),
-      .enable_regs(enable_regs),
-      .error(cmd_error),
-      .reg_sel(reg_sel)
-      );
+  spi_slave_cmd_parser u_cmd_parser
+  (
+      .cmd         ( command     ), // In,
+      .get_addr    ( get_addr    ), // Out,
+      .get_mode    ( get_mode    ), // Out,
+      .get_data    ( get_data    ), // Out,
+      .send_data   ( send_data   ), // Out,
+      .wait_dummy  ( wait_dummy  ), // Out,
+      .enable_cont ( enable_cont ), // Out,
+      .enable_regs ( enable_regs ), // Out,
+      .error       ( cmd_error   ), // Out,
+      .reg_sel     ( reg_sel     )  // Out
+  );
 
   spi_slave_regs #(
       .REG_SIZE(REG_SIZE)
@@ -113,10 +116,10 @@ module spi_slave_controller
       );
   always_comb
   begin
-    pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD;
-    rx_counter     = 8'h1F;
+    pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD_RX;
+    rx_counter     = 8'(DATA_WIDTH-1);
     rx_counter_upd = 0;
-    tx_counter_next     = 8'h1F;
+    tx_counter_next     = 8'(DATA_WIDTH-1);
     tx_counter_upd_next = 0;
     decode_cmd_comb = 1'b0;
     sample_ADDR     = 1'b0;
@@ -131,7 +134,7 @@ module spi_slave_controller
     case(state)
       CMD:
       begin
-        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD;
+        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD_RX;
         decode_cmd_comb = 1'b1;
         ctrl_data_tx_ready_next = 1'b1; //empty TX fifo if not allready empty
         if(rx_data_valid)
@@ -141,7 +144,7 @@ module spi_slave_controller
           begin
             state_next     = ADDR;
             rx_counter_upd = 1;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(ADDR_WIDTH/4-1) : 8'(ADDR_WIDTH-1);
           end
           else if (get_data)
           begin
@@ -155,7 +158,7 @@ module spi_slave_controller
             state_next     = DATA_TX;
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             if (~enable_regs)
               ctrl_data_tx_ready_next = 1'b1;
           end
@@ -167,8 +170,8 @@ module spi_slave_controller
       end
       ADDR:
       begin
-        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD;
-                ctrl_data_tx_ready_next = 1'b1;
+        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD_RX;
+        ctrl_data_tx_ready_next = 1'b1;
         if(rx_data_valid)
         begin
           sample_ADDR     = 1'b1;
@@ -182,13 +185,13 @@ module spi_slave_controller
           begin
             state_next     = DATA_TX;
             tx_counter_upd_next = 1;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
           end
           else if (get_data)
           begin
             state_next     = DATA_RX;
             rx_counter_upd = 1;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
           end
         end
         else
@@ -198,7 +201,7 @@ module spi_slave_controller
       end
       MODE:
       begin
-        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD;
+        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD_RX;
         if(rx_data_valid)
         begin
           if (wait_dummy)
@@ -210,13 +213,13 @@ module spi_slave_controller
           else if (get_data)
           begin
             state_next     = DATA_RX;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             rx_counter_upd = 1;
           end
           else if (send_data)
           begin
             state_next     = DATA_TX;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
             if (~enable_regs)
@@ -230,21 +233,19 @@ module spi_slave_controller
       end
       DUMMY:
       begin
-        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD;
+        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD_RX;
         if(rx_data_valid)
         begin
           if (get_data)
           begin
             state_next     = DATA_RX;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             rx_counter_upd = 1;
           end
           else
           begin
-            if (en_quad)
-              pad_mode_next  = `SPI_QUAD_TX;
             state_next     = DATA_TX;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
             if (~enable_regs)
@@ -258,7 +259,7 @@ module spi_slave_controller
       end
       DATA_RX:
       begin
-        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD;
+        pad_mode  = en_quad ? `SPI_QUAD_RX : `SPI_STD_RX;
         if(rx_data_valid)
         begin
           if (enable_regs)
@@ -268,7 +269,7 @@ module spi_slave_controller
           if (enable_cont)
           begin
             state_next     = DATA_RX;
-            rx_counter     = en_quad ? 8'h7 : 8'h1F;
+            rx_counter     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             rx_counter_upd = 1;
           end
           else
@@ -285,13 +286,13 @@ module spi_slave_controller
       end
       DATA_TX:
       begin
-        pad_mode  = en_quad ? `SPI_QUAD_TX : `SPI_STD;
+        pad_mode  = en_quad ? `SPI_QUAD_TX : `SPI_STD_TX;
         if(tx_done_reg)
         begin
           if (enable_cont)
           begin
             state_next     = DATA_TX;
-            tx_counter_next     = en_quad ? 8'h7 : 8'h1F;
+            tx_counter_next     = en_quad ? 8'(DATA_WIDTH/4-1) : 8'(DATA_WIDTH-1);
             tx_counter_upd_next = 1;
             tx_data_valid_next   = 1'b1;
             if (~enable_regs)
@@ -333,31 +334,31 @@ module spi_slave_controller
   begin
     if (cs == 1'b1)
     begin
-      addr_reg    = 'h0;
-      mode_reg    = 'h0;
-      data_reg    = 'h0;
-      cmd_reg     = 'h0;
-      tx_done_reg = 1'b0;
-      ctrl_addr_valid = 1'b0;
-      tx_counter_upd  = 1'b0;
-      tx_data_valid   = 1'b0;
-      ctrl_data_tx_ready = 1'b0;
-      tx_counter      =  'h0;
-      tx_data         =  'h0;
+      addr_reg            <= 'h0;
+      mode_reg            <= 'h0;
+      data_reg            <= 'h0;
+      cmd_reg             <= 'h0;
+      tx_done_reg         <= 1'b0;
+      ctrl_addr_valid     <= 1'b0;
+      tx_counter_upd      <= 1'b0;
+      tx_data_valid       <= 1'b0;
+      ctrl_data_tx_ready  <= 1'b0;
+      tx_counter          <=  'h0;
+      tx_data             <=  'h0;
     end
     else
     begin
-      if (sample_ADDR) addr_reg = rx_data;
-      if (sample_MODE) mode_reg = rx_data[7:0];
-      if (sample_CMD)  cmd_reg  = rx_data[7:0];
-      if (sample_DATA) data_reg = rx_data;
-      ctrl_addr_valid = sample_ADDR;
-      tx_counter_upd  = tx_counter_upd_next;
-      tx_counter      = tx_counter_next;
-      tx_data_valid   = tx_data_valid_next;
-      tx_done_reg     = tx_done;
-      ctrl_data_tx_ready = ctrl_data_tx_ready_next;
-      tx_data      = (enable_regs) ? reg_data : ctrl_data_tx;
+      if (sample_ADDR) addr_reg <= rx_data;
+      if (sample_MODE) mode_reg <= rx_data[7:0];
+      if (sample_CMD)  cmd_reg  <= rx_data[7:0];
+      if (sample_DATA) data_reg <= rx_data;
+      ctrl_addr_valid           <= sample_ADDR;
+      tx_counter_upd            <= tx_counter_upd_next;
+      tx_counter                <= tx_counter_next;
+      tx_data_valid             <= tx_data_valid_next;
+      tx_done_reg               <= tx_done;
+      ctrl_data_tx_ready        <= ctrl_data_tx_ready_next;
+      tx_data                   <= (enable_regs) ? reg_data : ctrl_data_tx;
     end
   end
 

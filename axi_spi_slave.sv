@@ -1,4 +1,4 @@
-// Copyright 2015 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
 // compliance with the License.  You may obtain a copy of the License at
@@ -20,7 +20,10 @@ module axi_spi_slave
     input  logic                        test_mode,
     input  logic                        spi_sclk,
     input  logic                        spi_cs,
-    output logic  [1:0]                 spi_mode,
+    output logic                        spi_oen0_o,
+    output logic                        spi_oen1_o,
+    output logic                        spi_oen2_o,
+    output logic                        spi_oen3_o,
     input  logic                        spi_sdi0,
     input  logic                        spi_sdi1,
     input  logic                        spi_sdi2,
@@ -92,30 +95,30 @@ module axi_spi_slave
     logic        en_quad;
     logic  [7:0] rx_counter;
     logic        rx_counter_upd;
-    logic [31:0] rx_data;
+    logic [AXI_DATA_WIDTH-1:0] rx_data;
     logic        rx_data_valid;
 
     logic  [7:0] tx_counter;
     logic        tx_counter_upd;
-    logic [31:0] tx_data;
+    logic [AXI_DATA_WIDTH-1:0] tx_data;
     logic        tx_data_valid;
 
     logic        ctrl_rd_wr;
 
-    logic [31:0] ctrl_addr;
+    logic [AXI_ADDR_WIDTH-1:0] ctrl_addr;
     logic        ctrl_addr_valid;
 
-    logic [31:0] ctrl_data_rx;
+    logic [AXI_DATA_WIDTH-1:0] ctrl_data_rx;
     logic        ctrl_data_rx_valid;
     logic        ctrl_data_rx_ready;
-    logic [31:0] ctrl_data_tx;
+    logic [AXI_DATA_WIDTH-1:0] ctrl_data_tx;
     logic        ctrl_data_tx_valid;
     logic        ctrl_data_tx_ready;
 
-    logic [31:0] fifo_data_rx;
+    logic [AXI_DATA_WIDTH-1:0] fifo_data_rx;
     logic        fifo_data_rx_valid;
     logic        fifo_data_rx_ready;
-    logic [31:0] fifo_data_tx;
+    logic [AXI_DATA_WIDTH-1:0] fifo_data_tx;
     logic        fifo_data_tx_valid;
     logic        fifo_data_tx_ready;
 
@@ -125,11 +128,15 @@ module axi_spi_slave
 
     logic        tx_done;
     logic        rd_wr_sync;
+    logic [1:0]  pad_mode;
 
     logic [15:0] wrap_length;
 
-    spi_slave_rx u_rxreg
-    (
+    spi_slave_rx #(
+
+        .DATA_WIDTH ( AXI_DATA_WIDTH )
+    )
+    u_rxreg(
         .sclk           ( spi_sclk       ),
         .cs             ( spi_cs         ),
         .sdi0           ( spi_sdi0       ),
@@ -143,11 +150,18 @@ module axi_spi_slave
         .data_ready     ( rx_data_valid  )
     );
 
-    spi_slave_tx u_txreg
-    (
+    spi_slave_tx #(
+    .DATA_WIDTH ( AXI_DATA_WIDTH )
+    )
+    u_txreg (
         .test_mode      ( test_mode      ),
         .sclk           ( spi_sclk       ),
         .cs             ( spi_cs         ),
+        .pad_mode       ( pad_mode       ),
+        .spi_oen0_o     ( spi_oen0_o     ),
+        .spi_oen1_o     ( spi_oen1_o     ),
+        .spi_oen2_o     ( spi_oen2_o     ),
+        .spi_oen3_o     ( spi_oen3_o     ),
         .sdo0           ( spi_sdo0       ),
         .sdo1           ( spi_sdo1       ),
         .sdo2           ( spi_sdo2       ),
@@ -162,7 +176,9 @@ module axi_spi_slave
 
     spi_slave_controller
     #(
-        .DUMMY_CYCLES ( DUMMY_CYCLES )
+        .DUMMY_CYCLES ( DUMMY_CYCLES ),
+        .ADDR_WIDTH ( AXI_ADDR_WIDTH ),
+        .DATA_WIDTH ( AXI_DATA_WIDTH )
     )
     u_slave_sm
     (
@@ -170,7 +186,7 @@ module axi_spi_slave
         .sys_rstn           ( axi_aresetn        ),
         .cs                 ( spi_cs             ),
         .en_quad            ( en_quad            ),
-        .pad_mode           ( spi_mode           ),
+        .pad_mode           ( pad_mode           ),
         .rx_counter         ( rx_counter         ),
         .rx_counter_upd     ( rx_counter_upd     ),
         .rx_data            ( rx_data            ),
@@ -194,7 +210,7 @@ module axi_spi_slave
 
     spi_slave_dc_fifo
     #(
-        .DATA_WIDTH   ( 32 ),
+        .DATA_WIDTH   ( AXI_DATA_WIDTH ),
         .BUFFER_DEPTH ( 8  )
     )
     u_dcfifo_rx
@@ -213,7 +229,7 @@ module axi_spi_slave
 
     spi_slave_dc_fifo
     #(
-        .DATA_WIDTH   ( 32 ),
+        .DATA_WIDTH   ( AXI_DATA_WIDTH ),
         .BUFFER_DEPTH ( 8  )
     )
     u_dcfifo_tx

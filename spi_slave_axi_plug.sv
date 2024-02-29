@@ -1,4 +1,4 @@
-// Copyright 2015 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
 // compliance with the License.  You may obtain a copy of the License at
@@ -78,10 +78,10 @@ module spi_slave_axi_plug
     input  logic                        rxtx_addr_valid,
     input  logic                        start_tx,
     input  logic                        cs,
-    output logic                 [31:0] tx_data,
+    output logic [AXI_DATA_WIDTH-1:0]   tx_data,
     output logic                        tx_valid,
     input  logic                        tx_ready,
-    input  logic                 [31:0] rx_data,
+    input  logic [AXI_DATA_WIDTH-1:0]   rx_data,
     input  logic                        rx_valid,
     output logic                        rx_ready,
 
@@ -90,32 +90,33 @@ module spi_slave_axi_plug
 
   logic [AXI_ADDR_WIDTH-1:0] curr_addr;
   logic [AXI_ADDR_WIDTH-1:0] next_addr;
-  logic [31:0]               curr_data_rx;
+  logic [AXI_DATA_WIDTH-1:0] curr_data_rx;
   logic [AXI_DATA_WIDTH-1:0] curr_data_tx;
   logic                      incr_addr_w;
   logic                      incr_addr_r;
   logic                      sample_fifo;
   logic                      sample_axidata;
+  logic                      axi_int_w_ready;
+  logic                      axi_int_w_valid;
 
   // up to 64 kwords (256kB)
   logic [15:0] tx_counter;
 
-  enum logic [2:0] {IDLE,DATA,AXIADDR,AXIDATA,AXIRESP} AR_CS,AR_NS,AW_CS,AW_NS;
-
+  enum logic [2:0] {Idle, Data, AxiValid, AxiAddr, AxiData, AxiResp} ar_q, ar_d, aw_q, aw_d;
   always_ff @(posedge axi_aclk or negedge axi_aresetn)
   begin
     if (axi_aresetn == 0)
     begin
-      AW_CS         <= IDLE;
-      AR_CS         <= IDLE;
+      aw_q          <= Idle;
+      ar_q          <= Idle;
       curr_data_rx  <=  'h0;
       curr_data_tx  <=  'h0;
       curr_addr     <=  'h0;
     end
     else
     begin
-      AW_CS <= AW_NS;
-      AR_CS <= AR_NS;
+      aw_q <= aw_d;
+      ar_q <= ar_d;
       if (sample_fifo)
       begin
         curr_data_rx <= rx_data;
@@ -145,64 +146,69 @@ module spi_slave_axi_plug
 
   always_comb
   begin
-    next_addr = 32'b0;
+    next_addr = AXI_ADDR_WIDTH'(0);
     if(rxtx_addr_valid)
       next_addr = rxtx_addr;
     else if(tx_counter == wrap_length-1)
       next_addr = rxtx_addr;
     else
-      next_addr = curr_addr + 32'h4;
+      next_addr = curr_addr + AXI_ADDR_WIDTH'(4);
   end
+
+  // "stream_fork" module is used to decouple AW and W channels
+  stream_fork #(
+    .N_OUP (2)
+  ) stream_fork_i (
+    .clk_i   ( axi_aclk                                  ),
+    .rst_ni  ( axi_aresetn                               ),
+    .valid_i ( axi_int_w_valid                           ),
+    .ready_o ( axi_int_w_ready                           ),
+    .valid_o ( {axi_master_w_valid, axi_master_aw_valid} ),
+    .ready_i ( {axi_master_w_ready, axi_master_aw_ready} )
+  );
 
   always_comb
   begin
-    AW_NS      = IDLE;
-    sample_fifo = 1'b0;
-    rx_ready   = 1'b0;
-    axi_master_aw_valid = 1'b0;
-    axi_master_w_valid  = 1'b0;
-    axi_master_b_ready  = 1'b0;
-    incr_addr_w         = 1'b0;
-    case(AW_CS)
-      IDLE:
+    aw_d               = Idle;
+    sample_fifo        = 1'b0;
+    rx_ready           = 1'b0;
+    axi_master_b_ready = 1'b0;
+    axi_int_w_valid    = 1'b0;
+    incr_addr_w        = 1'b0;
+    unique case(aw_q)
+      Idle:
       begin
         if(rx_valid)
         begin
           sample_fifo = 1'b1;
           rx_ready    = 1'b1;
-          AW_NS       = AXIADDR;
+          aw_d        = AxiValid;
         end
         else
         begin
-          AW_NS      = IDLE;
+          aw_d = Idle;
         end
-      end
-      AXIADDR:
+      end // case: Idle
+      AxiValid:
       begin
-        axi_master_aw_valid = 1'b1;
-        if (axi_master_aw_ready)
-          AW_NS = AXIDATA;
-        else
-          AW_NS = AXIADDR;
-      end
-      AXIDATA:
-      begin
-        axi_master_w_valid = 1'b1;
-        if (axi_master_w_ready)
+        axi_int_w_valid = 1'b1;
+        if(axi_int_w_ready)
         begin
-          incr_addr_w         = 1'b1;
-          AW_NS = AXIRESP;
+          incr_addr_w = 1'b1;
+          aw_d = AxiResp;
         end
         else
-          AW_NS = AXIDATA;
+        begin
+          aw_d = AxiValid;
+        end
       end
-      AXIRESP:
+      AxiResp:
       begin
         axi_master_b_ready = 1'b1;
         if (axi_master_b_valid)
-          AW_NS = IDLE;
+          aw_d = Idle;
         else
-          AW_NS = AXIRESP;
+          aw_d = AxiResp;
       end
 
     endcase
@@ -210,73 +216,80 @@ module spi_slave_axi_plug
 
   always_comb
   begin
-    AR_NS               = IDLE;
+    ar_d                = Idle;
     tx_valid            = 1'b0;
     axi_master_ar_valid = 1'b0;
     axi_master_r_ready  = 1'b0;
     incr_addr_r         = 1'b0;
     sample_axidata      = 1'b0;
-    case(AR_CS)
-      IDLE:
+    case(ar_q)
+      Idle:
       begin
         if(start_tx && !cs)
         begin
-          AR_NS      = AXIADDR;
+          ar_d      = AxiAddr;
         end
         else
         begin
-          AR_NS      = IDLE;
+          ar_d      = Idle;
         end
       end
-      DATA:
+      Data:
       begin
         tx_valid = 1'b1;
         if (cs)
         begin
-          AR_NS = IDLE;
+          ar_d = Idle;
         end
         else
         begin
           if(tx_ready)
-          begin
-            incr_addr_r = 1'b1;
-            AR_NS       = AXIADDR;
-          end
+            if(tx_counter == wrap_length-1)
+            begin
+              ar_d = Idle;
+            end
+            else
+            begin
+              incr_addr_r = 1'b1;
+              ar_d       = AxiAddr;
+            end
           else
           begin
-            AR_NS      = DATA;
+            ar_d = Data;
           end
         end
       end
-      AXIADDR:
+      AxiAddr:
       begin
         axi_master_ar_valid = 1'b1;
         if (axi_master_ar_ready)
-          AR_NS = AXIRESP;
+          ar_d = AxiResp;
         else
-          AR_NS = AXIADDR;
+          ar_d = AxiAddr;
       end
-      AXIRESP:
+      AxiResp:
       begin
         axi_master_r_ready = 1'b1;
         if (axi_master_r_valid)
         begin
           sample_axidata = 1'b1;
-          AR_NS = DATA;
+          ar_d = Data;
         end
         else
-          AR_NS = AXIRESP;
+          ar_d = AxiResp;
       end
 
     endcase
   end
 
   // for now, let us support only 32-bit reads!
-  generate if (AXI_DATA_WIDTH == 32)
-    assign tx_data = curr_data_tx[31:0];
-  else
-    assign tx_data = curr_addr[2] ? curr_data_tx[63:32] : curr_data_tx[31:0];
-  endgenerate
+  // generate if (AXI_DATA_WIDTH == 32)
+  //   assign tx_data = curr_data_tx[31:0];
+  // else
+  //   assign tx_data = curr_addr[2] ? curr_data_tx[63:32] : curr_data_tx[31:0];
+  // endgenerate
+
+  assign tx_data = curr_data_tx;
 
   assign axi_master_aw_addr   =  curr_addr;
   assign axi_master_aw_prot   =  'h0;
@@ -290,12 +303,13 @@ module spi_slave_axi_plug
   assign axi_master_aw_id     =  'h1;
   assign axi_master_aw_user   =  'h0;
 
-  assign axi_master_w_data    = {AXI_DATA_WIDTH/32{curr_data_rx}}; // replicate curr_data_rx as often as needed
-  generate if (AXI_DATA_WIDTH == 32)
-    assign axi_master_w_strb    = 4'hF;
-  else
-    assign axi_master_w_strb    = curr_addr[2] ? 8'hF0 : 8'h0F;
-  endgenerate
+  assign axi_master_w_data    = curr_data_rx; // replicate curr_data_rx as often as needed
+  // generate if (AXI_DATA_WIDTH == 32)
+  //   assign axi_master_w_strb    = 4'hF;
+  // else
+  //   assign axi_master_w_strb    = curr_addr[2] ? 8'hF0 : 8'h0F;
+  // endgenerate
+  assign axi_master_w_strb    = '1;
   assign axi_master_w_user    =  'h0;
   assign axi_master_w_last    = 1'b1;
 
