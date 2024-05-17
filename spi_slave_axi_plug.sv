@@ -152,7 +152,7 @@ module spi_slave_axi_plug
     else if(tx_counter == wrap_length-1)
       next_addr = rxtx_addr;
     else
-      next_addr = curr_addr + AXI_ADDR_WIDTH'(4);
+      next_addr = curr_addr + AXI_ADDR_WIDTH'(AXI_DATA_WIDTH/8);
   end
 
   // "stream_fork" module is used to decouple AW and W channels
