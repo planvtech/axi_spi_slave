@@ -30,7 +30,7 @@ module spi_slave_regs #(
 
   assign en_qpi       = reg0[0];
   assign dummy_cycles = reg1;
-  assign wrap_length  = {reg3,reg2};
+  assign wrap_length  = {reg3,reg2} + 1;
 
   always_comb
   begin

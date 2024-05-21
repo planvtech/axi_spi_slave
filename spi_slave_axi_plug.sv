@@ -243,17 +243,17 @@ module spi_slave_axi_plug
         end
         else
         begin
-          if(tx_ready)
+          if(tx_ready)begin
+            incr_addr_r = 1'b1;
             if(tx_counter == wrap_length-1)
             begin
               ar_d = Idle;
             end
             else
             begin
-              incr_addr_r = 1'b1;
               ar_d       = AxiAddr;
             end
-          else
+          end else
           begin
             ar_d = Data;
           end
